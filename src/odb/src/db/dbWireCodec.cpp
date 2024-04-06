@@ -368,6 +368,10 @@ int dbWireEncoder::addVia(dbVia* via)
     _layer = top;
     addOp(WOP_VIA | WOP_VIA_EXIT_TOP, via->getImpl()->getOID());
   } else {
+    printf("Invalid via type; current layer = %s, via top = %s, via bottom = %s\n",
+      _layer->getConstName(),
+      top->getConstName(),
+      bot->getConstName());
     ZASSERT(DB_WIRE_ENCODER_INVALID_VIA_LAYER);
     addOp(WOP_VIA, 0);
   }
@@ -390,6 +394,10 @@ int dbWireEncoder::addTechVia(dbTechVia* via)
     _layer = top;
     addOp(WOP_TECH_VIA | WOP_VIA_EXIT_TOP, via->getImpl()->getOID());
   } else {
+    printf("Invalid tech via type; current layer = %s, via top = %s, via bottom = %s\n",
+      _layer->getConstName(),
+      top->getConstName(),
+      bot->getConstName());
     ZASSERT(DB_WIRE_ENCODER_INVALID_VIA_LAYER);
     addOp(WOP_TECH_VIA, 0);
   }
