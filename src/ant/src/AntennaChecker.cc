@@ -45,6 +45,7 @@
 #include "odb/wOrder.h"
 #include "sta/StaMain.hh"
 #include "utl/Logger.h"
+#include "utl/spo.h"
 
 namespace ant {
 
@@ -1719,6 +1720,8 @@ void AntennaChecker::checkGate(
 
 int AntennaChecker::checkAntennas(dbNet* net, bool verbose)
 {
+  spo::InvocationTracer tracer("AntennaChecker::checkAntennas({})", net == nullptr ? "null" : net->getName());
+
   initAntennaRules();
 
   std::ofstream report_file;

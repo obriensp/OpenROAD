@@ -5721,6 +5721,8 @@ class dbMTerm : public dbObject
   // From LEF's ANTENNADIFFAREA on the MACRO's PIN
   void getDiffArea(std::vector<std::pair<double, dbTechLayer*>>& data);
 
+  bool hasDiffArea();
+
   void* staPort();
   void staSetPort(void* port);
 
@@ -6682,6 +6684,7 @@ class dbTechAntennaPinModel : public dbObject
   void addMaxSideAreaCAREntry(double inval, dbTechLayer* refly = nullptr);
   void addMaxCutCAREntry(double inval, dbTechLayer* refly = nullptr);
 
+  bool hasGateArea();
   void getGateArea(std::vector<std::pair<double, dbTechLayer*>>& data);
   void getMaxAreaCAR(std::vector<std::pair<double, dbTechLayer*>>& data);
   void getMaxSideAreaCAR(std::vector<std::pair<double, dbTechLayer*>>& data);

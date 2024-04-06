@@ -73,6 +73,7 @@ add_library(utl_lib
   src/ScopedTemporaryFile.cpp
   src/Logger.cpp
   src/timer.cpp
+  src/spo.cpp
 )
 
 target_include_directories(utl_lib
@@ -92,6 +93,7 @@ target_sources(utl
   PRIVATE
     src/LoggerCommon.cpp
     src/MakeLogger.cpp
+    src/spo.cpp
 )
   
 target_include_directories(utl

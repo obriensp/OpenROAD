@@ -46,6 +46,7 @@
 #include "Pin.h"
 #include "grt/GlobalRouter.h"
 #include "utl/Logger.h"
+#include "utl/spo.h"
 
 namespace grt {
 
@@ -98,8 +99,14 @@ bool RepairAntennas::checkAntennaViolations(NetRouteMap& routing,
 
 void RepairAntennas::makeNetWires(NetRouteMap& routing, int max_routing_layer)
 {
+  spo::InvocationTracer trace("RepairAntennas::makeNetWires({} routes)", routing.size());
   std::map<int, odb::dbTechVia*> default_vias
       = grouter_->getDefaultVias(max_routing_layer);
+
+  spo::print("Default vias:");
+  for (auto& [layer, via] : default_vias) {
+    spo::print("  {}: {}", layer, via->getName());
+  }
 
   for (auto& [db_net, route] : routing) {
     if (!grouter_->getNet(db_net)->isLocal()) {
@@ -113,6 +120,9 @@ odb::dbWire* RepairAntennas::makeNetWire(
     GRoute& route,
     std::map<int, odb::dbTechVia*>& default_vias)
 {
+  spo::InvocationTracer trace("RepairAntennas::makeNetWire({})", db_net->getName());
+
+  spo::print("Creating wire for net: {}", db_net->getName());
   odb::dbWire* wire = odb::dbWire::create(db_net);
   if (wire) {
     Net* net = grouter_->getNet(db_net);
@@ -155,7 +165,15 @@ odb::dbWire* RepairAntennas::makeNetWire(
         int x1 = seg.init_x;
         int y1 = seg.init_y;
 
+        spo::print("Creating wire segment starting at {}, {}; layers {} -> {}",
+          x1, y1,
+          seg.init_layer, seg.final_layer);
+        spo::print("Bottom tech layer: {}, top: {}",
+          bottom_tech_layer->getName(),
+          top_tech_layer->getName());
+
         if (seg.isVia()) {
+          spo::print("Segment is via");
           if (bottom_layer >= grouter_->getMinRoutingLayer()) {
             if (bottom_layer == prev_conn_layer) {
               wire_encoder.newPath(bottom_tech_layer, odb::dbWireType::ROUTED);
@@ -189,8 +207,10 @@ odb::dbWire* RepairAntennas::makeNetWire(
           // Add wire
           int x2 = seg.final_x;
           int y2 = seg.final_y;
+          spo::print("Segment is wire ending at {}, {}", x2, y2);
           if (x1 != x2 || y1 != y2) {
             odb::dbTechLayer* tech_layer = tech->findRoutingLayer(l1);
+            spo::print("Wire is on layer: {}", tech_layer->getName());
             addWireTerms(net,
                          route,
                          x1,
@@ -221,6 +241,8 @@ odb::dbWire* RepairAntennas::makeNetWire(
       }
     }
     wire_encoder.end();
+
+    spo::print("Done creating wire for net {}\n", db_net->getName());
 
     odb::orderWires(logger_, db_net);
     return wire;
@@ -256,6 +278,9 @@ void RepairAntennas::addWireTerms(Net* net,
                                   std::map<int, odb::dbTechVia*>& default_vias,
                                   bool connect_to_segment)
 {
+  spo::InvocationTracer tracer("RepairAntennas::addWireTerms({}, {} route segments, grid_x={}, grid_y={}, layer={}, tech_layer={})",
+    net->getName(), route.size(), grid_x, grid_y, layer, tech_layer->getName());
+
   std::vector<int> layers;
   layers.push_back(layer);
   if (layer == grouter_->getMinRoutingLayer()) {
@@ -266,7 +291,13 @@ void RepairAntennas::addWireTerms(Net* net,
   for (int l : layers) {
     auto itr = route_pt_pins.find(RoutePt(grid_x, grid_y, l));
     if (itr != route_pt_pins.end() && !itr->second.connected) {
+      spo::print("Pin count: {}", itr->second.pins.size());
       for (const Pin* pin : itr->second.pins) {
+        spo::print("Connect to pin {} on layer {} ({})",
+          pin->getName(),
+          pin->getConnectionLayer(),
+          db_->getTech()->findRoutingLayer(pin->getConnectionLayer())->getName());
+
         itr->second.connected = true;
         int conn_layer = pin->getConnectionLayer();
         std::vector<odb::Rect> pin_boxes = pin->getBoxes().at(conn_layer);
@@ -286,7 +317,12 @@ void RepairAntennas::addWireTerms(Net* net,
           }
         }
 
-        if (conn_layer >= grouter_->getMinRoutingLayer()) {
+        if (pin->getName() == "_812_/X") {
+          spo::print("Special pin");
+        }
+
+        // if (conn_layer >= grouter_->getMinRoutingLayer() || conn_layer == tech_layer->getRoutingLevel()) {
+          if (conn_layer >= grouter_->getMinRoutingLayer()) {
           wire_encoder.newPath(tech_layer, odb::dbWireType::ROUTED);
           wire_encoder.addPoint(grid_pt.x(), grid_pt.y());
           wire_encoder.addPoint(pin_pt.x(), grid_pt.y());
@@ -298,13 +334,39 @@ void RepairAntennas::addWireTerms(Net* net,
           odb::dbTechLayer* layer2
               = tech->findRoutingLayer(grouter_->getMinRoutingLayer() + 1);
 
+          spo::print("Tech layer: {}", tech_layer->getName());
+          spo::print("Routing layers: {}, {}", layer1->getName(), layer2->getName());
+          spo::print("Connection layer: {}, {}", pin->getConnectionLayer(), tech->findRoutingLayer(pin->getConnectionLayer())->getName());
+
           if (connect_to_segment && tech_layer != layer2) {
+            spo::print("** need via since {} != {}", tech_layer->getName(), layer2->getName());
+            spo::print("routing levels: {}, {}\n", tech_layer->getRoutingLevel(), layer2->getRoutingLevel());
             // if wire to pin connects to a segment in a different layer, create
             // a via to connect both wires
+            spo::print("Starting path on layer: {}, routing level {}", tech_layer->getName(), tech_layer->getRoutingLevel());
             wire_encoder.newPath(tech_layer, odb::dbWireType::ROUTED);
             wire_encoder.addPoint(grid_pt.x(), grid_pt.y());
-            wire_encoder.addTechVia(
-                default_vias[grouter_->getMinRoutingLayer()]);
+            // wire_encoder.addTechVia(
+            //     default_vias[grouter_->getMinRoutingLayer()]);
+
+            // int current_layer = layer;
+            // while (current_layer < grouter_->getMinRoutingLayer()) {
+            for (int i = tech_layer->getRoutingLevel(); i < layer2->getRoutingLevel(); i++) {
+              wire_encoder.addTechVia(default_vias[i]);
+              // odb::dbTechVia* tech_via = default_vias[i];
+              // spo::print("Adding tech via {} from {} to {}",
+              //   tech_via->getName(),
+              //   tech_via->getBottomLayer()->getName(),
+              //   tech_via->getTopLayer()->getName());
+              //   // wire_encoder.addPoint(grid_pt.x(), grid_pt.y());
+              //   wire_encoder.addTechVia(tech_via);
+              // // wire_encoder.addTechVia(
+              //     // default_vias[grouter_->getMinRoutingLayer()]);
+            }
+
+            // if (tech_layer->getRoutingLevel() < 2) {
+            //   spo::print("Done with thing");
+            // }
           }
 
           if (layer2->getDirection() == odb::dbTechLayerDir::VERTICAL) {

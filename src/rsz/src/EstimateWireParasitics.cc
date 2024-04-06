@@ -37,6 +37,7 @@
 #include "SteinerTree.hh"
 
 #include "utl/Logger.h"
+#include "utl/spo.h"
 #include "db_sta/dbNetwork.hh"
 
 #include "sta/Report.hh"
@@ -193,6 +194,8 @@ Resizer::ensureParasitics()
 void
 Resizer::estimateParasitics(ParasiticsSrc src)
 {
+  spo::InvocationTracer tracer("Resizer::estimateParasitics");
+
   switch (src) {
   case ParasiticsSrc::placement:
     estimateWireParasitics();

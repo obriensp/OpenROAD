@@ -62,7 +62,8 @@ _installCommonDev() {
     lastDir="$(pwd)"
     # tools versions
     osName="linux"
-    cmakeChecksum="b8d86f8c5ee990ae03c486c3631cee05"
+    osArch=$(arch)
+    cmakeChecksum="6a6af752af4b1eae175e1dd0459ec850"
     cmakeVersionBig=3.24
     cmakeVersionSmall=${cmakeVersionBig}.2
     pcreVersion=10.42
@@ -87,10 +88,10 @@ _installCommonDev() {
     cmakeBin=${cmakePrefix}/bin/cmake
     if [[ ! -f ${cmakeBin} || -z $(${cmakeBin} --version | grep ${cmakeVersionBig}) ]]; then
         cd "${baseDir}"
-        wget https://cmake.org/files/v${cmakeVersionBig}/cmake-${cmakeVersionSmall}-${osName}-x86_64.sh
-        md5sum -c <(echo "${cmakeChecksum} cmake-${cmakeVersionSmall}-${osName}-x86_64.sh") || exit 1
-        chmod +x cmake-${cmakeVersionSmall}-${osName}-x86_64.sh
-        ./cmake-${cmakeVersionSmall}-${osName}-x86_64.sh --skip-license --prefix=${cmakePrefix}
+        wget https://cmake.org/files/v${cmakeVersionBig}/cmake-${cmakeVersionSmall}-${osName}-${osArch}.sh
+        md5sum -c <(echo "${cmakeChecksum} cmake-${cmakeVersionSmall}-${osName}-${osArch}.sh") || exit 1
+        chmod +x cmake-${cmakeVersionSmall}-${osName}-${osArch}.sh
+        ./cmake-${cmakeVersionSmall}-${osName}-${osArch}.sh --skip-license --prefix=${cmakePrefix}
     else
         echo "CMake already installed."
     fi
@@ -289,7 +290,7 @@ _installUbuntuPackages() {
     fi
 
     # need the strip "hack" above to run on docker
-    strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so
+    strip --remove-section=.note.ABI-tag /usr/lib/$(arch)-linux-gnu/libQt5Core.so
 }
 
 _installRHELCleanUp() {

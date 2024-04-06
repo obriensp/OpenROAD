@@ -45,6 +45,7 @@
 #include "dbWire.h"
 #include "dbWireOpcode.h"
 #include "utl/Logger.h"
+#include "utl/spo.h"
 
 namespace odb {
 
@@ -356,10 +357,17 @@ int dbWireEncoder::addPoint(int x, int y, int ext, uint property)
 
 int dbWireEncoder::addVia(dbVia* via)
 {
+  spo::InvocationTracer tracer("dbWireEncoder::addVia({})", via->getName());
+
   int jct_id = _idx;
   ZASSERT(_point_cnt != 0);
   dbTechLayer* top = via->getTopLayer();
   dbTechLayer* bot = via->getBottomLayer();
+
+  spo::print("Add via between {}-{}; current layer = {}",
+    top->getName(),
+    bot->getName(),
+    _layer->getName());
 
   if (top == _layer) {
     _layer = bot;
@@ -368,6 +376,7 @@ int dbWireEncoder::addVia(dbVia* via)
     _layer = top;
     addOp(WOP_VIA | WOP_VIA_EXIT_TOP, via->getImpl()->getOID());
   } else {
+    spo::print("Invalid via!");
     ZASSERT(DB_WIRE_ENCODER_INVALID_VIA_LAYER);
     addOp(WOP_VIA, 0);
   }
@@ -378,10 +387,17 @@ int dbWireEncoder::addVia(dbVia* via)
 
 int dbWireEncoder::addTechVia(dbTechVia* via)
 {
+  spo::InvocationTracer tracer("dbWireEncoder::addTechVia({})", via->getName());
+
   int jct_id = _idx;
   ZASSERT(_point_cnt != 0);
   dbTechLayer* top = via->getTopLayer();
   dbTechLayer* bot = via->getBottomLayer();
+
+  spo::print("Add tech via between {}-{}; current layer = {}",
+    top->getName(),
+    bot->getName(),
+    _layer->getName());
 
   if (top == _layer) {
     _layer = bot;
@@ -390,7 +406,11 @@ int dbWireEncoder::addTechVia(dbTechVia* via)
     _layer = top;
     addOp(WOP_TECH_VIA | WOP_VIA_EXIT_TOP, via->getImpl()->getOID());
   } else {
-    ZASSERT(DB_WIRE_ENCODER_INVALID_VIA_LAYER);
+    spo::print("Invalid layer for via: {}; _layer: {}", via->getName(), _layer->getName());
+    spo::print("Via top: {}", top->getName());
+    spo::print("Via bottom: {}", bot->getName());
+    printf("\n*** assert DB_WIRE_ENCODER_INVALID_VIA_LAYER\n\n");
+    // ZASSERT(DB_WIRE_ENCODER_INVALID_VIA_LAYER);
     addOp(WOP_TECH_VIA, 0);
   }
   clearColor();

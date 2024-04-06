@@ -34,6 +34,7 @@
 
 #include "db.h"
 #include "tmg_conn.h"
+#include "utl/spo.h"
 
 namespace odb {
 
@@ -54,6 +55,8 @@ void orderWires(utl::Logger* logger, dbBlock* block)
 
 void orderWires(utl::Logger* logger, dbNet* net)
 {
+  spo::InvocationTracer tracer("odb::orderWires({})", net->getName());
+
   if (conn == nullptr) {
     conn = new tmg_conn(logger);
   }
