@@ -293,7 +293,9 @@ void RepairAntennas::addWireTerms(Net* net,
           // via to connect both wires
           wire_encoder.newPath(tech_layer, odb::dbWireType::ROUTED);
           wire_encoder.addPoint(grid_pt.x(), grid_pt.y());
-          wire_encoder.addTechVia(default_vias[grouter_->getMinRoutingLayer()]);
+          for (int i = tech_layer->getRoutingLevel(); i < layer2->getRoutingLevel(); i++) {
+            wire_encoder.addTechVia(default_vias[i]);
+          }
         }
 
         if (layer2->getDirection() == odb::dbTechLayerDir::VERTICAL) {
